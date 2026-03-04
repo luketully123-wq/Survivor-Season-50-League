@@ -110,14 +110,31 @@ export default function App() {
 
     const leaderboard = [...data.players]
       .map((p) => ({ ...p, total: playerTotal.get(p.id) || 0 }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => {
+        const d = b.total - a.total
+        if (d !== 0) return d
+        return a.name.localeCompare(b.name) // tie-break
+    })
+    const castScoreboard = [...data.cast]
+  .map((c) => ({
+    ...c,
+    total: castTotal.get(c.id) || 0,
+    draftedByPlayerId: data.draft.find((d) => d.cast_member_id === c.id)?.player_id ?? null,
+  }))
+  .sort((a, b) => {
+    const d = b.total - a.total
+    if (d !== 0) return d
+    return a.name.localeCompare(b.name)
+  })
 
+const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
+    
     const outcomeByCast = new Map<string, any>()
     for (const o of data.outcomes.filter((x) => x.week_number === week)) {
       outcomeByCast.set(o.cast_member_id, o)
     }
 
-    return { castById, draftedByPlayer, draftedSet, leaderboard, outcomeByCast }
+    return { castById, draftedByPlayer, draftedSet, leaderboard, outcomeByCast, castScoreboard, playerNameById }
   }, [data, week])
 
   async function doSetDraft(playerId: string, castId: string) {
@@ -261,10 +278,37 @@ export default function App() {
       </div>
 
       <div className="wood" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">
-          <h2>Teams</h2>
-          <span>Team name + cast headshots</span>
-        </div>
+  <div className="sectionTitle">
+    <h2>Cast Member Scoreboard</h2>
+    <span>Total points by cast member</span>
+  </div>
+
+  <div className="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th className="rank">Rank</th>
+          <th>Cast member</th>
+          <th>Drafted by</th>
+          <th className="pts">Total Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {computed.castScoreboard.map((c, idx) => {
+          const draftedBy = c.draftedByPlayerId ? computed.playerNameById.get(c.draftedByPlayerId) : null
+          return (
+            <tr key={c.id}>
+              <td className="rank">{idx + 1}</td>
+              <td className="playerName">{c.name}</td>
+              <td>{draftedBy ? <span className="badge">{draftedBy}</span> : <span className="small">Undrafted</span>}</td>
+              <td className="pts">{c.total}</td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
 
         <div className="gridPlayers">
           {computed.leaderboard.map((p) => (
