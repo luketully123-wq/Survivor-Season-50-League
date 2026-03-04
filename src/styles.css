@@ -45,3 +45,51 @@ tr+tr td{border-top:1px solid rgba(215,179,106,0.12);}
 .box h3{margin:0 0 8px;font-size:14px;}
 .tableWrap{overflow:auto;}
 .outcomeInput{width:74px;}
+/* --- Survivor / Jungle upgrades --- */
+
+body{
+  /* extra jungle texture layers */
+  background:
+    radial-gradient(900px 650px at 10% 0%, rgba(42,107,59,0.65), transparent 60%),
+    radial-gradient(900px 650px at 90% 10%, rgba(215,179,106,0.20), transparent 55%),
+    radial-gradient(900px 900px at 50% 120%, rgba(42,107,59,0.45), transparent 62%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 18px),
+    linear-gradient(180deg,var(--bg0),var(--bg1));
+}
+
+.sectionTitle h2{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.torchDot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background: radial-gradient(circle at 30% 30%, #fff3cc 0%, #ffd37a 35%, #ff9b2f 60%, rgba(255,80,0,0.0) 70%);
+  box-shadow:
+    0 0 10px rgba(255,170,60,0.55),
+    0 0 22px rgba(255,120,40,0.35);
+  animation: flicker 1.8s infinite ease-in-out;
+}
+
+@keyframes flicker{
+  0%,100%{ transform: translateY(0) scale(1); opacity: 0.9; }
+  50%{ transform: translateY(-1px) scale(1.08); opacity: 1; }
+}
+
+.wood{
+  /* richer board feel */
+  background:
+    radial-gradient(1200px 260px at 50% 0%, rgba(255,220,150,0.08), transparent 70%),
+    linear-gradient(90deg, rgba(255,255,255,0.03), transparent 30%, rgba(0,0,0,0.18)),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 2px, transparent 2px, transparent 20px),
+    linear-gradient(180deg,#4a2f1d,#1e120b);
+}
+
+.badge{
+  /* slightly more “tribal tag” */
+  border-color: rgba(215,179,106,0.38);
+  background: rgba(0,0,0,0.30);
+}
