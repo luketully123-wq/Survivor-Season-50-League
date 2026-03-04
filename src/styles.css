@@ -139,3 +139,7 @@ tr+tr td{border-top:1px solid rgba(215,179,106,0.12);}
 
 .draftTile.mine{ outline:2px solid rgba(80,255,140,0.35); }
 .draftTile.taken{ filter:saturate(0.85); }
+/* Compact cast tiles inside the combined table */
+.castsMini { gap: 6px; }
+.tileMini { width: 64px; height: 84px; border-radius: 14px; }
+.tileMini .name { font-size: 10px; padding: 4px 6px; }
