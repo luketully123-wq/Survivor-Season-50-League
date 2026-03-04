@@ -255,6 +255,6 @@ tr+tr td{border-top:1px solid rgba(215,179,106,0.12);}
 .draftTile.taken{ filter:saturate(0.85); }
 
 /* Compact cast tiles inside combined table */
-.castsMini{ gap:20px; padding:8px 0; }
-.tileMini{ width:120px; height:160px; border-radius:18px; }
+.castsMini{ gap:40px; padding:8px 0; }
+.tileMini{ width:180px; height:240px; border-radius:18px; }
 .tileMini .name{ font-size:12px; padding:5px 6px; }
