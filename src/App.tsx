@@ -254,29 +254,59 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
       </div>
 
       <div className="wood" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">
-          <h2>Leaderboard</h2>
-          <span>Rank • Player • Total Points</span>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th className="rank">Rank</th>
-              <th>Player</th>
-              <th className="pts">Total Points</th>
+  <div className="sectionTitle">
+    <h2><span className="torchDot" /> Leaderboard + Teams</h2>
+    <span>Rank • Player • Team • Cast • Total Points</span>
+  </div>
+
+  <div className="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th className="rank">Rank</th>
+          <th>Player</th>
+          <th>Team</th>
+          <th>Cast</th>
+          <th className="pts">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {computed.leaderboard.map((p, idx) => {
+          const picks = computed.draftedByPlayer.get(p.id) || []
+          return (
+            <tr key={p.id}>
+              <td className="rank">{idx + 1}</td>
+              <td className="playerName">{p.name}</td>
+              <td><span className="badge">{p.team_name}</span></td>
+              <td>
+                <div className="casts castsMini">
+                  {picks.length === 0 ? (
+                    <span className="small">Draft not entered yet.</span>
+                  ) : (
+                    picks
+                      .map((id) => computed.castById.get(id))
+                      .filter(Boolean)
+                      .map((c) => (
+                        <div className="tile tileMini" key={(c as any).id} title={(c as any).name}>
+                          {(c as any).headshot_url ? (
+                            <img src={(c as any).headshot_url} alt={(c as any).name} />
+                          ) : (
+                            <div style={{ height: '100%' }} />
+                          )}
+                          <div className="name">{(c as any).name}</div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </td>
+              <td className="pts">{p.total}</td>
             </tr>
-          </thead>
-          <tbody>
-            {computed.leaderboard.map((p, idx) => (
-              <tr key={p.id}>
-                <td className="rank">{idx + 1}</td>
-                <td className="playerName">{p.name}</td>
-                <td className="pts">{p.total}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          )
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
 
       <div className="wood" style={{ marginBottom: 12 }}>
   <div className="sectionTitle">
@@ -315,41 +345,6 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
     <h2>Teams</h2>
     <span>Team name + cast headshots</span>
   </div>
-        <div className="gridPlayers">
-          {computed.leaderboard.map((p) => (
-            <div className="playerRow" key={p.id}>
-              <div className="avatarFallback">{initials(p.name) || '?'}</div>
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontWeight: 950, fontSize: 16 }}>
-                    {p.name} <span className="badge" style={{ marginLeft: 8 }}>{p.team_name}</span>
-                  </div>
-                  <div className="badge">Total: {p.total}</div>
-                </div>
-                <div className="small">Draft picks: {(computed.draftedByPlayer.get(p.id) || []).length} / 3</div>
-              </div>
-
-              <div className="casts">
-                {(computed.draftedByPlayer.get(p.id) || []).length === 0 ? (
-                  <div className="hint">Draft not entered yet.</div>
-                ) : (
-                  (computed.draftedByPlayer.get(p.id) || [])
-                    .map((id) => computed.castById.get(id))
-                    .filter(Boolean)
-                    .map((c) => (
-                      <div className="tile" key={(c as any).id} title={(c as any).name}>
-                        {(c as any).headshot_url ? <img src={(c as any).headshot_url} alt={(c as any).name} /> : <div style={{ height: '100%' }} />}
-                        <div className="name">{(c as any).name}</div>
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="wood">
         <div className="sectionTitle">
           <h2>Commissioner Tools</h2>
