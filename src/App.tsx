@@ -406,68 +406,146 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
 
 function DraftBox(props: {
   players: Array<{ id: string; name: string; team_name: string }>
-  cast: Array<{ id: string; name: string }>
+  cast: Array<{ id: string; name: string; headshot_url?: string | null }>
   draftedByPlayer: Map<string, string[]>
   draftedSet: Set<string>
   onAdd: (playerId: string, castId: string) => void
   onRemove: (playerId: string, castId: string) => void
 }) {
-  const { players, cast, draftedByPlayer, draftedSet, onAdd, onRemove } = props
+    const { players, cast, draftedByPlayer, draftedSet, onAdd, onRemove } = props
   const [playerId, setPlayerId] = useState(players[0]?.id ?? '')
-  const [castId, setCastId] = useState('')
 
   const playerPicks = draftedByPlayer.get(playerId) || []
-  const availableCast = cast.filter((c) => !draftedSet.has(c.id) || playerPicks.includes(c.id))
+
+  // Map cast_member_id -> player_id (who owns it)
+  const ownerByCast = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const p of players) {
+      for (const cid of draftedByPlayer.get(p.id) || []) {
+        m.set(cid, p.id)
+      }
+    }
+    return m
+  }, [players, draftedByPlayer])
+
+  const playerNameById = useMemo(() => new Map(players.map((p) => [p.id, p.name])), [players])
+
+  function handleTileClick(castId: string) {
+    const owner = ownerByCast.get(castId)
+
+    // If already picked by this player => remove
+    if (owner === playerId) {
+      onRemove(playerId, castId)
+      return
+    }
+
+    // If owned by someone else => do nothing
+    if (owner && owner !== playerId) return
+
+    // Otherwise add (if player has room)
+    if (playerPicks.length >= 3) return
+    onAdd(playerId, castId)
+  }
 
   return (
     <div className="box">
-      <h3>Draft (enter later)</h3>
-      <div className="hint">Assign up to <b>3</b> cast per player. Duplicates across players are blocked automatically.</div>
+      <h3>Draft Board (commissioner)</h3>
+      <div className="hint">
+        Click cast tiles to draft. Each player gets <b>3</b> cast members. Duplicates are blocked.
+      </div>
       <div className="divider" />
 
       <label className="hint" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        Player
-        <select className="select" value={playerId} onChange={(e) => { setPlayerId(e.target.value); setCastId('') }}>
+        Select player
+        <select
+          className="select"
+          value={playerId}
+          onChange={(e) => setPlayerId(e.target.value)}
+        >
           {players.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} — {p.team_name}</option>
+            <option key={p.id} value={p.id}>
+              {p.name} — {p.team_name}
+            </option>
           ))}
         </select>
       </label>
 
       <div className="divider" />
 
-      <label className="hint" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        Add cast member
-        <select className="select" value={castId} onChange={(e) => setCastId(e.target.value)}>
-          <option value="">Select…</option>
-          {availableCast
-            .filter((c) => !playerPicks.includes(c.id))
-            .map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-        </select>
-      </label>
+      <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+        <div className="hint">
+          <b>{playerNameById.get(playerId)}</b> picks: {playerPicks.length}/3
+        </div>
+        {playerPicks.length >= 3 ? <span className="badge">Team full</span> : <span className="badge">Select {3 - playerPicks.length} more</span>}
+      </div>
 
       <div className="divider" />
 
-      <button className="btn" disabled={!playerId || !castId || playerPicks.length >= 3} onClick={() => { onAdd(playerId, castId); setCastId('') }}>
-        Add pick
-      </button>
+      {/* Visual draft board */}
+      <div className="draftGrid">
+        {cast.map((c) => {
+          const owner = ownerByCast.get(c.id) || null
+          const isMine = owner === playerId
+          const isTaken = !!owner && owner !== playerId
+          const canAdd = !owner && playerPicks.length < 3
+
+          const statusText = isMine
+            ? "On this team (click to remove)"
+            : isTaken
+              ? `Drafted by ${playerNameById.get(owner!) ?? "another player"}`
+              : canAdd
+                ? "Available (click to draft)"
+                : "Available (team full)"
+
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className={
+                "draftTile" +
+                (isMine ? " mine" : "") +
+                (isTaken ? " taken" : "") +
+                (!owner && playerPicks.length >= 3 ? " disabled" : "")
+              }
+              onClick={() => handleTileClick(c.id)}
+              disabled={isTaken || (!owner && playerPicks.length >= 3)}
+              title={statusText}
+            >
+              <div className="draftImg">
+                {c.headshot_url ? (
+                  <img src={c.headshot_url} alt={c.name} />
+                ) : (
+                  <div className="draftImgFallback" />
+                )}
+              </div>
+
+              <div className="draftMeta">
+                <div className="draftName">{c.name}</div>
+
+                {isMine && <div className="draftTag ok">On team • click to remove</div>}
+                {isTaken && <div className="draftTag lock">Drafted • {playerNameById.get(owner!)}</div>}
+                {!owner && !isMine && !isTaken && (
+                  <div className={"draftTag"}>{playerPicks.length >= 3 ? "Team full" : "Available"}</div>
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
 
       <div className="divider" />
 
-      <div className="hint"><b>Current picks</b> ({playerPicks.length}/3)</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+      <div className="hint"><b>Current picks</b></div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
         {playerPicks.length === 0 ? (
-          <div className="hint">None yet.</div>
+          <span className="small">None yet.</span>
         ) : (
           playerPicks.map((cid) => {
-            const cm = cast.find((c) => c.id === cid)
+            const cm = cast.find((x) => x.id === cid)
             return (
-              <div key={cid} className="row" style={{ justifyContent: 'space-between' }}>
-                <span className="hint">{cm?.name ?? cid}</span>
-                <button className="btn" onClick={() => onRemove(playerId, cid)}>Remove</button>
-              </div>
+              <span key={cid} className="badge" title="Click tile above to remove">
+                {cm?.name ?? cid}
+              </span>
             )
           })
         )}
