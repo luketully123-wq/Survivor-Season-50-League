@@ -310,7 +310,7 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
 
       <div className="wood" style={{ marginBottom: 12 }}>
   <div className="sectionTitle">
-    <h2>Cast Member Scoreboard</h2>
+    <h2><span className="torchDot" /> Cast Member Scoreboard</h2>
     <span>Total points by cast member</span>
   </div>
 
@@ -331,7 +331,9 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
             <tr key={c.id}>
               <td className="rank">{idx + 1}</td>
               <td className="playerName">{c.name}</td>
-              <td>{draftedBy ? <span className="badge">{draftedBy}</span> : <span className="small">Undrafted</span>}</td>
+              <td>
+                {draftedBy ? <span className="badge">{draftedBy}</span> : <span className="small">Undrafted</span>}
+              </td>
               <td className="pts">{c.total}</td>
             </tr>
           )
@@ -340,58 +342,53 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
     </table>
   </div>
 </div>
-<div className="wood" style={{ marginBottom: 12 }}>
+
+<div className="wood">
   <div className="sectionTitle">
-    <h2>Teams</h2>
-    <span>Team name + cast headshots</span>
+    <h2><span className="torchDot" /> Commissioner Tools</h2>
+    <span>Draft + weekly outcomes entry</span>
   </div>
-      <div className="wood">
-        <div className="sectionTitle">
-          <h2>Commissioner Tools</h2>
-          <span>Draft + weekly outcomes entry</span>
-        </div>
 
-        <div className="panel" style={{ paddingTop: 12 }}>
-          <div className="formGrid">
-            <DraftBox
-              players={data.players}
-              cast={data.cast}
-              draftedByPlayer={computed.draftedByPlayer}
-              draftedSet={computed.draftedSet}
-              onAdd={doSetDraft}
-              onRemove={doRemoveDraft}
-            />
+  <div className="panel" style={{ paddingTop: 12 }}>
+    <div className="formGrid">
+      <DraftBox
+        players={data.players}
+        cast={data.cast}
+        draftedByPlayer={computed.draftedByPlayer}
+        draftedSet={computed.draftedSet}
+        onAdd={doSetDraft}
+        onRemove={doRemoveDraft}
+      />
 
-            <div className="box">
-              <h3>Points system</h3>
-              <div className="hint">Loaded from <code>scoring_rules</code> table.</div>
-              <div className="divider" />
-              <ul className="hint" style={{ margin: 0, paddingLeft: 18 }}>
-                {data.scoringRules.map((r) => (
-                  <li key={r.category_key}><b>{r.label}:</b> {r.points} pts</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="box">
-              <h3>How totals work</h3>
-              <div className="hint">
-                Cast members earn points from weekly outcomes. Player total = sum of their 3 cast members’ season totals.
-              </div>
-            </div>
-          </div>
-
-          <div className="divider" />
-
-          <OutcomesTable
-            week={week}
-            cast={data.cast}
-            existingByCast={computed.outcomeByCast}
-            onSave={doSaveOutcomes}
-          />
-        </div>
+      <div className="box">
+        <h3>Points system</h3>
+        <div className="hint">Loaded from <code>scoring_rules</code> table.</div>
+        <div className="divider" />
+        <ul className="hint" style={{ margin: 0, paddingLeft: 18 }}>
+          {data.scoringRules.map((r) => (
+            <li key={r.category_key}><b>{r.label}:</b> {r.points} pts</li>
+          ))}
+        </ul>
       </div>
 
+      <div className="box">
+        <h3>How totals work</h3>
+        <div className="hint">
+          Cast members earn points from weekly outcomes. Player total = sum of their 3 cast members’ season totals.
+        </div>
+      </div>
+    </div>
+
+    <div className="divider" />
+
+    <OutcomesTable
+      week={week}
+      cast={data.cast}
+      existingByCast={computed.outcomeByCast}
+      onSave={doSaveOutcomes}
+    />
+  </div>
+</div>
       <div className="footer">
         Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
       </div>
