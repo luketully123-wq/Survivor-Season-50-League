@@ -109,13 +109,14 @@ export default function App() {
     }
 
     const leaderboard = [...data.players]
-      .map((p) => ({ ...p, total: playerTotal.get(p.id) || 0 }))
-      .sort((a, b) => {
-        const d = b.total - a.total
-        if (d !== 0) return d
-        return a.name.localeCompare(b.name) // tie-break
-    })
-    const castScoreboard = [...data.cast]
+  .map((p) => ({ ...p, total: playerTotal.get(p.id) || 0 }))
+  .sort((a, b) => {
+    const d = b.total - a.total
+    if (d !== 0) return d
+    return a.name.localeCompare(b.name) // tie-break
+  })
+
+const castScoreboard = [...data.cast]
   .map((c) => ({
     ...c,
     total: castTotal.get(c.id) || 0,
@@ -309,7 +310,11 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
     </table>
   </div>
 </div>
-
+<div className="wood" style={{ marginBottom: 12 }}>
+  <div className="sectionTitle">
+    <h2>Teams</h2>
+    <span>Team name + cast headshots</span>
+  </div>
         <div className="gridPlayers">
           {computed.leaderboard.map((p) => (
             <div className="playerRow" key={p.id}>
