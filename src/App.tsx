@@ -33,6 +33,20 @@ type CastMember = { id: string; name: string; headshot_url?: string | null }
 type Player = { id: string; name: string; team_name: string }
 type ScoringRule = { category_key: string; label: string; points: number }
 
+function trendBadge(prevRank?: number | null, currRank?: number | null) {
+  if (!prevRank || !currRank) return <span className="hint">—</span>
+  const delta = prevRank - currRank // positive = improved
+  if (delta > 0) return <span className="success">▲ {delta}</span>
+  if (delta < 0) return <span className="error">▼ {Math.abs(delta)}</span>
+  return <span className="hint">•</span>
+}
+
+function rankMapFromSorted<T extends { id: string }>(sorted: T[]) {
+  const m = new Map<string, number>()
+  sorted.forEach((x, idx) => m.set(x.id, idx + 1))
+  return m
+}
+
 export default function App() {
   const [joinCode, setJoinCode] = useState<string>(
     localStorage.getItem(LS_JOIN) || (import.meta.env.VITE_DEFAULT_JOIN_CODE ?? ''),
@@ -80,6 +94,7 @@ export default function App() {
     const players: Player[] = data.players as any
     const cast: CastMember[] = data.cast as any
     const rules: ScoringRule[] = data.scoringRules as any
+    const outcomes: any[] = data.outcomes as any[]
 
     // Draft mappings
     const draftedByPlayer = new Map<string, string[]>()
@@ -105,70 +120,106 @@ export default function App() {
       )
     }
 
-    // Cast totals (season + this week)
-    const castSeasonTotal = new Map<string, number>()
-    const castWeekTotal = new Map<string, number>()
-    cast.forEach((c) => {
-      castSeasonTotal.set(c.id, 0)
-      castWeekTotal.set(c.id, 0)
-    })
-
     // Outcomes lookup for current week (for inputs)
     const outcomeByCast = new Map<string, any>()
-    for (const o of (data.outcomes as any[]).filter((x) => x.week_number === week)) {
+    for (const o of outcomes.filter((x) => x.week_number === week)) {
       outcomeByCast.set(o.cast_member_id, o)
     }
 
-    // Aggregate totals
-    for (const o of data.outcomes as any[]) {
-      const pts = pointsForOutcome(o)
-      castSeasonTotal.set(o.cast_member_id, (castSeasonTotal.get(o.cast_member_id) || 0) + pts)
+    // Totals helpers: cumulative up to a given week (inclusive)
+    function buildCastTotalsUpTo(weekN: number) {
+      const castTotals = new Map<string, number>()
+      cast.forEach((c) => castTotals.set(c.id, 0))
+      for (const o of outcomes) {
+        if ((o.week_number || 0) <= weekN) {
+          const pts = pointsForOutcome(o)
+          castTotals.set(o.cast_member_id, (castTotals.get(o.cast_member_id) || 0) + pts)
+        }
+      }
+      return castTotals
+    }
+
+    const castTotalUpToWeek = buildCastTotalsUpTo(week)
+    const castTotalUpToPrevWeek = week > 1 ? buildCastTotalsUpTo(week - 1) : new Map<string, number>()
+
+    // Week totals for cast (selected week only)
+    const castWeekTotal = new Map<string, number>()
+    cast.forEach((c) => castWeekTotal.set(c.id, 0))
+    for (const o of outcomes) {
       if (o.week_number === week) {
+        const pts = pointsForOutcome(o)
         castWeekTotal.set(o.cast_member_id, (castWeekTotal.get(o.cast_member_id) || 0) + pts)
       }
     }
 
-    // Player totals (still used elsewhere in this file)
-    const playerSeasonTotal = new Map<string, number>()
-    const playerWeekTotal = new Map<string, number>()
-    players.forEach((p) => {
-      const ids = draftedByPlayer.get(p.id) || []
-      const seasonSum = ids.reduce((acc, cid) => acc + (castSeasonTotal.get(cid) || 0), 0)
-      const weekSum = ids.reduce((acc, cid) => acc + (castWeekTotal.get(cid) || 0), 0)
-      playerSeasonTotal.set(p.id, seasonSum)
-      playerWeekTotal.set(p.id, weekSum)
-    })
-
-    const leaderboard = [...players]
-      .map((p) => ({
-        ...p,
-        total: playerSeasonTotal.get(p.id) || 0,
-        weekTotal: playerWeekTotal.get(p.id) || 0,
-      }))
-      .sort((a, b) => (b.total - a.total) || (b.weekTotal - a.weekTotal))
-
-    /**
-     * ✅ Cast Member Scoreboard (ranked by season total)
-     * This is what we'll render, with inline weekly outcome inputs.
-     */
+    // Cast leaderboard (cumulative up to selected week)
     const castScoreboard = [...cast]
       .map((c) => ({
         ...c,
         weekTotal: castWeekTotal.get(c.id) || 0,
-        total: castSeasonTotal.get(c.id) || 0,
+        total: castTotalUpToWeek.get(c.id) || 0,
       }))
       .sort((a, b) => (b.total - a.total) || (b.weekTotal - a.weekTotal))
+
+    const castScoreboardPrev = week > 1
+      ? [...cast]
+          .map((c) => ({
+            ...c,
+            total: castTotalUpToPrevWeek.get(c.id) || 0,
+          }))
+          .sort((a, b) => b.total - a.total)
+      : []
+
+    const castRankNow = rankMapFromSorted(castScoreboard as any)
+    const castRankPrev = week > 1 ? rankMapFromSorted(castScoreboardPrev as any) : new Map<string, number>()
+
+    // Team (player) totals up to week (cumulative), plus rank-change vs previous week
+    function playerTotalsFromCastTotals(castTotals: Map<string, number>) {
+      const totals = new Map<string, number>()
+      players.forEach((p) => {
+        const ids = draftedByPlayer.get(p.id) || []
+        const sum = ids.reduce((acc, cid) => acc + (castTotals.get(cid) || 0), 0)
+        totals.set(p.id, sum)
+      })
+      return totals
+    }
+
+    const playerTotalUpToWeek = playerTotalsFromCastTotals(castTotalUpToWeek)
+    const playerTotalUpToPrev = week > 1 ? playerTotalsFromCastTotals(castTotalUpToPrevWeek) : new Map<string, number>()
+
+    const teamsLeaderboard = [...players]
+      .map((p) => ({
+        ...p,
+        total: playerTotalUpToWeek.get(p.id) || 0,
+      }))
+      .sort((a, b) => b.total - a.total)
+
+    const teamsLeaderboardPrev = week > 1
+      ? [...players]
+          .map((p) => ({
+            ...p,
+            total: playerTotalUpToPrev.get(p.id) || 0,
+          }))
+          .sort((a, b) => b.total - a.total)
+      : []
+
+    const teamRankNow = rankMapFromSorted(teamsLeaderboard as any)
+    const teamRankPrev = week > 1 ? rankMapFromSorted(teamsLeaderboardPrev as any) : new Map<string, number>()
 
     return {
       castById,
       draftedByPlayer,
       draftedSet,
-      leaderboard,
       outcomeByCast,
-      castSeasonTotal,
-      castWeekTotal,
       rulePoints,
+      castWeekTotal,
+      castTotalUpToWeek,
       castScoreboard,
+      castRankNow,
+      castRankPrev,
+      teamsLeaderboard,
+      teamRankNow,
+      teamRankPrev,
     }
   }, [data, week])
 
@@ -242,7 +293,7 @@ export default function App() {
               <div>
                 <div className="title">Survivor Season 50 League</div>
                 <div className="hint">
-                  Commissioner-only: draft + weekly outcomes entered by one person. Everyone can view leaderboard + teams.
+                  Commissioner-only: draft + weekly outcomes entered by one person. Everyone can view leaderboards + teams.
                 </div>
               </div>
             </div>
@@ -318,11 +369,11 @@ export default function App() {
         </div>
       </div>
 
-      {/* ✅ Cast Member Scoreboard + Weekly Outcomes (INLINE) */}
+      {/* ✅ Teams Leaderboard (moved ABOVE cast leaderboard) */}
       <div className="wood" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">
-          <h2>Cast Member Scoreboard</h2>
-          <span>Total points by cast member • enter week {week} outcomes inline</span>
+          <h2>Teams Leaderboard</h2>
+          <span>Rank • movement vs week {Math.max(1, week - 1)} • bigger cast tiles • total cumulative score</span>
         </div>
 
         <div className="tableWrap">
@@ -330,6 +381,87 @@ export default function App() {
             <thead>
               <tr>
                 <th className="rank">Rank</th>
+                <th style={{ width: 80 }}>Δ</th>
+                <th>Team</th>
+                <th>Draft picks</th>
+                <th className="pts">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {computed.teamsLeaderboard.map((p: any) => {
+                const currRank = computed.teamRankNow.get(p.id) || null
+                const prevRank = week > 1 ? (computed.teamRankPrev.get(p.id) || null) : null
+                const picks = (computed.draftedByPlayer.get(p.id) || [])
+                  .map((cid: string) => computed.castById.get(cid))
+                  .filter(Boolean) as any[]
+
+                return (
+                  <tr key={p.id}>
+                    <td className="rank">{currRank}</td>
+                    <td>{trendBadge(prevRank, currRank)}</td>
+                    <td className="playerName">
+                      {p.name} <span className="badge" style={{ marginLeft: 8 }}>{p.team_name}</span>
+                    </td>
+
+                    <td>
+                      {picks.length === 0 ? (
+                        <span className="hint">Draft not entered yet.</span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                          {picks.map((c: any) => (
+                            <div
+                              key={c.id}
+                              className="tile"
+                              title={c.name}
+                              style={{
+                                width: 120,
+                                height: 160,
+                                borderRadius: 14,
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {c.headshot_url ? (
+                                <img
+                                  src={c.headshot_url}
+                                  alt={c.name}
+                                  style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
+                                />
+                              ) : (
+                                <div style={{ width: '100%', height: 120 }} />
+                              )}
+                              <div className="name" style={{ padding: '8px 10px', fontSize: 14, lineHeight: 1.1 }}>
+                                {c.name}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="pts">
+                      <span className="badge">{p.total}</span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ✅ Cast Member Scoreboard + Weekly Outcomes (INLINE) */}
+      <div className="wood" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">
+          <h2>Cast Member Scoreboard</h2>
+          <span>Rank • movement vs week {Math.max(1, week - 1)} • enter week {week} outcomes inline</span>
+        </div>
+
+        <div className="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th className="rank">Rank</th>
+                <th style={{ width: 80 }}>Δ</th>
                 <th>Cast member</th>
 
                 {/* Weekly outcomes inputs go here */}
@@ -343,22 +475,27 @@ export default function App() {
 
                 {/* Totals on the right */}
                 <th className="pts">Week pts</th>
-                <th className="pts">Total Points</th>
+                <th className="pts">Total</th>
               </tr>
             </thead>
 
             <tbody>
-              {computed.castScoreboard.map((c: any, idx: number) => (
-                <CastOutcomeRow
-                  key={c.id}
-                  rank={idx + 1}
-                  cast={c}
-                  existing={computed.outcomeByCast.get(c.id)}
-                  weekPoints={computed.castWeekTotal.get(c.id) || 0}
-                  totalPoints={computed.castSeasonTotal.get(c.id) || 0}
-                  onSave={doSaveOutcomes}
-                />
-              ))}
+              {computed.castScoreboard.map((c: any) => {
+                const currRank = computed.castRankNow.get(c.id) || null
+                const prevRank = week > 1 ? (computed.castRankPrev.get(c.id) || null) : null
+                return (
+                  <CastOutcomeRow
+                    key={c.id}
+                    rank={currRank || 0}
+                    prevRank={prevRank}
+                    cast={c}
+                    existing={computed.outcomeByCast.get(c.id)}
+                    weekPoints={computed.castWeekTotal.get(c.id) || 0}
+                    totalPoints={computed.castTotalUpToWeek.get(c.id) || 0}
+                    onSave={doSaveOutcomes}
+                  />
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -368,60 +505,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Everything else stays the same (Teams, Draft tools, etc.) */}
-      <div className="wood" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">
-          <h2>Teams</h2>
-          <span>Team name + cast headshots</span>
-        </div>
-
-        <div className="gridPlayers">
-          {computed.leaderboard.map((p: any) => (
-            <div className="playerRow" key={p.id}>
-              <div className="avatarFallback">{initials(p.name) || '?'}</div>
-
-              <div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div style={{ fontWeight: 950, fontSize: 16 }}>
-                    {p.name} <span className="badge" style={{ marginLeft: 8 }}>{p.team_name}</span>
-                  </div>
-                  <div className="badge">Week: {p.weekTotal} • Total: {p.total}</div>
-                </div>
-                <div className="small">Draft picks: {(computed.draftedByPlayer.get(p.id) || []).length} / 3</div>
-              </div>
-
-              <div className="casts">
-                {(computed.draftedByPlayer.get(p.id) || []).length === 0 ? (
-                  <div className="hint">Draft not entered yet.</div>
-                ) : (
-                  (computed.draftedByPlayer.get(p.id) || [])
-                    .map((id: string) => computed.castById.get(id))
-                    .filter(Boolean)
-                    .map((c: any) => (
-                      <div className="tile" key={c.id} title={c.name}>
-                        {c.headshot_url ? <img src={c.headshot_url} alt={c.name} /> : <div style={{ height: '100%' }} />}
-                        <div className="name">{c.name}</div>
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="wood">
         <div className="sectionTitle">
           <h2>Commissioner Tools</h2>
-          <span>Draft entry</span>
+          <span>Draft entry + points system</span>
         </div>
 
         <div className="panel" style={{ paddingTop: 12 }}>
@@ -453,7 +540,7 @@ export default function App() {
             <div className="box">
               <h3>How totals work</h3>
               <div className="hint">
-                Cast members earn points from weekly outcomes. Player totals are the sum of their drafted cast members.
+                Cast members earn points from weekly outcomes. Team total = sum of that player’s drafted cast members (cumulative up to the selected week).
               </div>
             </div>
           </div>
@@ -565,17 +652,18 @@ function DraftBox(props: {
 
 /**
  * ✅ Combined row:
- * Cast member name + weekly outcome inputs + save + totals
+ * Rank + trend + cast member name + weekly outcome inputs + save + totals
  */
 function CastOutcomeRow(props: {
   rank: number
+  prevRank?: number | null
   cast: { id: string; name: string }
   existing?: any
   weekPoints: number
   totalPoints: number
   onSave: (castId: string, values: OutcomeFormState) => void
 }) {
-  const { rank, cast, existing, weekPoints, totalPoints, onSave } = props
+  const { rank, prevRank, cast, existing, weekPoints, totalPoints, onSave } = props
 
   const [v, setV] = useState<OutcomeFormState>(() => ({
     immunity_wins: existing?.immunity_wins ?? 0,
@@ -613,9 +701,9 @@ function CastOutcomeRow(props: {
   return (
     <tr>
       <td className="rank">{rank}</td>
+      <td>{trendBadge(prevRank, rank)}</td>
       <td className="playerName">{cast.name}</td>
 
-      {/* Weekly outcome inputs inline */}
       <td>
         <input className="input outcomeInput" type="number" min={0} value={v.immunity_wins} onChange={(e) => setNum('immunity_wins', e.target.value)} />
       </td>
@@ -641,7 +729,6 @@ function CastOutcomeRow(props: {
         </button>
       </td>
 
-      {/* Totals on the right */}
       <td className="pts">{weekPoints}</td>
       <td className="pts">{totalPoints}</td>
     </tr>
