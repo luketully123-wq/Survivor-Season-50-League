@@ -16,27 +16,20 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
  const LS_JOIN = 's50_join'
  const LS_ADMIN = 's50_admin'
  
--function initials(name: string) {
--  return name
--    .split(' ')
--    .filter(Boolean)
--    .slice(0, 2)
--    .map((s) => s[0]?.toUpperCase())
--    .join('')
-+type OutcomeFormState = {
-+  immunity_wins: number
-+  reward_wins: number
-+  idol_found: number
-+  idol_played: number
-+  power_found: number
-+  power_played: number
+
+type OutcomeFormState = {
+  immunity_wins: number
+  reward_wins: number
+  idol_found: number
+  idol_played: number
+  power_found: number
+  power_played: number
  }
  
--type OutcomeFormState = {
-+type CastMember = { id: string; name: string; headshot_url: string | null }
-+type OutcomeRowData = {
-+  week_number: number
-+  cast_member_id: string
+type CastMember = { id: string; name: string; headshot_url: string | null }
+type OutcomeRowData = {
+   week_number: number
+   cast_member_id: string
    immunity_wins: number
    reward_wins: number
    idol_found: number
@@ -88,42 +81,20 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
      }
  
      const leaderboard = [...data.players]
--  .map((p) => ({ ...p, total: playerTotal.get(p.id) || 0 }))
--  .sort((a, b) => {
--    const d = b.total - a.total
--    if (d !== 0) return d
--    return a.name.localeCompare(b.name) // tie-break
--  })
--
--const castScoreboard = [...data.cast]
--  .map((c) => ({
--    ...c,
--    total: castTotal.get(c.id) || 0,
--    draftedByPlayerId: data.draft.find((d) => d.cast_member_id === c.id)?.player_id ?? null,
--  }))
--  .sort((a, b) => {
--    const d = b.total - a.total
--    if (d !== 0) return d
--    return a.name.localeCompare(b.name)
--  })
--
--const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
--    
--    const outcomeByCast = new Map<string, any>()
-+      .map((p) => ({ ...p, total: playerTotal.get(p.id) || 0 }))
-+      .sort((a, b) => {
-+        const diff = b.total - a.total
-+        if (diff !== 0) return diff
-+        return a.name.localeCompare(b.name)
-+      })
-+
-+    const outcomeByCast = new Map<string, OutcomeRowData>()
+
+      .map((p) => ({ ...p, total: playerTotal.get(p.id) || 0 }))
+      .sort((a, b) => {
+        const diff = b.total - a.total
+        if (diff !== 0) return diff
+        return a.name.localeCompare(b.name)
+      })
+
+    const outcomeByCast = new Map<string, OutcomeRowData>()
      for (const o of data.outcomes.filter((x) => x.week_number === week)) {
        outcomeByCast.set(o.cast_member_id, o)
      }
  
--    return { castById, draftedByPlayer, draftedSet, leaderboard, outcomeByCast, castScoreboard, playerNameById }
-+    return { castById, draftedByPlayer, draftedSet, leaderboard, outcomeByCast }
+    return { castById, draftedByPlayer, draftedSet, leaderboard, outcomeByCast }
    }, [data, week])
  
    async function doSetDraft(playerId: string, castId: string) {
@@ -175,10 +146,7 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
              {err && <div className="error">{err}</div>}
  
              <div className="divider" />
--            <div className="hint">
--              This project ships with an original placeholder logo. Replace it with an image you have rights to use.
--            </div>
-+            <div className="hint">This project ships with an original placeholder logo. Replace it with an image you have rights to use.</div>
+             <div className="hint">This project ships with an original placeholder logo. Replace it with an image you have rights to use.</div>
            </div>
          </div>
  
@@ -217,200 +185,113 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
        </div>
  
        <div className="wood" style={{ marginBottom: 12 }}>
--  <div className="sectionTitle">
--    <h2><span className="torchDot" /> Leaderboard + Teams</h2>
--    <span>Rank • Player • Team • Cast • Total Points</span>
--  </div>
--
--  <div className="tableWrap">
--    <table>
--      <thead>
--        <tr>
--          <th className="rank">Rank</th>
--          <th>Player</th>
--          <th>Team</th>
--          <th>Cast</th>
--          <th className="pts">Total</th>
--        </tr>
--      </thead>
--      <tbody>
--        {computed.leaderboard.map((p, idx) => {
--          const picks = computed.draftedByPlayer.get(p.id) || []
--          return (
--            <tr key={p.id}>
--              <td className="rank">{idx + 1}</td>
--              <td className="playerName">{p.name}</td>
--              <td><span className="badge">{p.team_name}</span></td>
--              <td>
--                <div className="casts castsMini">
--                  {picks.length === 0 ? (
--                    <span className="small">Draft not entered yet.</span>
--                  ) : (
--                    picks
--                      .map((id) => computed.castById.get(id))
--                      .filter(Boolean)
--                      .map((c) => (
--                        <div className="tile tileMini" key={(c as any).id} title={(c as any).name}>
--                          {(c as any).headshot_url ? (
--                            <img src={(c as any).headshot_url} alt={(c as any).name} />
--                          ) : (
--                            <div style={{ height: '100%' }} />
--                          )}
--                          <div className="name">{(c as any).name}</div>
--                        </div>
--                      ))
--                  )}
--                </div>
--              </td>
--              <td className="pts">{p.total}</td>
--            </tr>
--          )
--        })}
--      </tbody>
--    </table>
--  </div>
--</div>
--
--<div className="wood">
--  <div className="sectionTitle">
--    <h2><span className="torchDot" /> Commissioner Tools</h2>
--    <span>Draft + weekly outcomes entry</span>
--  </div>
--
--  <div className="panel" style={{ paddingTop: 12 }}>
--    <div className="formGrid">
--      <DraftBox
--        players={data.players}
--        cast={data.cast}
--        draftedByPlayer={computed.draftedByPlayer}
--        draftedSet={computed.draftedSet}
--        onAdd={doSetDraft}
--        onRemove={doRemoveDraft}
--      />
--
--      <div className="box">
--        <h3>Points system</h3>
--        <div className="hint">Loaded from <code>scoring_rules</code> table.</div>
--        <div className="divider" />
--        <ul className="hint" style={{ margin: 0, paddingLeft: 18 }}>
--          {data.scoringRules.map((r) => (
--            <li key={r.category_key}><b>{r.label}:</b> {r.points} pts</li>
--          ))}
--        </ul>
--      </div>
-+        <div className="sectionTitle">
-+          <h2><span className="torchDot" /> Leaderboard + Teams</h2>
-+          <span>Rank • Player • Team • Cast • Total Points</span>
-+        </div>
+
+        <div className="sectionTitle">
+          <h2><span className="torchDot" /> Leaderboard + Teams</h2>
+          <span>Rank • Player • Team • Cast • Total Points</span>
+        </div>
  
--      <div className="box">
--        <h3>How totals work</h3>
--        <div className="hint">
--          Cast members earn points from weekly outcomes. Player total = sum of their 3 cast members’ season totals.
-+        <div className="tableWrap">
-+          <table>
-+            <thead>
-+              <tr>
-+                <th className="rank">Rank</th>
-+                <th>Player</th>
-+                <th>Team</th>
-+                <th>Cast</th>
-+                <th className="pts">Total</th>
-+              </tr>
-+            </thead>
-+            <tbody>
-+              {computed.leaderboard.map((p, idx) => {
-+                const picks = computed.draftedByPlayer.get(p.id) || []
-+                return (
-+                  <tr key={p.id}>
-+                    <td className="rank">{idx + 1}</td>
-+                    <td className="playerName">{p.name}</td>
-+                    <td><span className="badge">{p.team_name}</span></td>
-+                    <td>
-+                      <div className="casts castsMini">
-+                        {picks.length === 0 ? (
-+                          <span className="small">Draft not entered yet.</span>
-+                        ) : (
-+                          picks
-+                            .map((id) => computed.castById.get(id))
-+                            .filter(Boolean)
-+                            .map((c) => (
-+                              <div className="tile tileMini" key={(c as CastMember).id} title={(c as CastMember).name}>
-+                                {(c as CastMember).headshot_url ? (
-+                                  <img src={(c as CastMember).headshot_url ?? undefined} alt={(c as CastMember).name} />
-+                                ) : (
-+                                  <div style={{ height: '100%' }} />
-+                                )}
-+                                <div className="name">{(c as CastMember).name}</div>
-+                              </div>
-+                            ))
-+                        )}
-+                      </div>
-+                    </td>
-+                    <td className="pts">{p.total}</td>
-+                  </tr>
-+                )
-+              })}
-+            </tbody>
-+          </table>
+        <div className="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th className="rank">Rank</th>
+                <th>Player</th>
+                <th>Team</th>
+                <th>Cast</th>
+                <th className="pts">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {computed.leaderboard.map((p, idx) => {
+                const picks = computed.draftedByPlayer.get(p.id) || []
+                return (
+                  <tr key={p.id}>
+                    <td className="rank">{idx + 1}</td>
+                    <td className="playerName">{p.name}</td>
+                    <td><span className="badge">{p.team_name}</span></td>
+                    <td>
+                      <div className="casts castsMini">
+                        {picks.length === 0 ? (
+                          <span className="small">Draft not entered yet.</span>
+                        ) : (
+                          picks
+                            .map((id) => computed.castById.get(id))
+                            .filter(Boolean)
+                            .map((c) => (
+                              <div className="tile tileMini" key={(c as CastMember).id} title={(c as CastMember).name}>
+                                {(c as CastMember).headshot_url ? (
+                                  <img src={(c as CastMember).headshot_url ?? undefined} alt={(c as CastMember).name} />
+                                ) : (
+                                  <div style={{ height: '100%' }} />
+                                )}
+                                <div className="name">{(c as CastMember).name}</div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="pts">{p.total}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
          </div>
        </div>
--    </div>
  
--    <div className="divider" />
-+      <div className="wood">
-+        <div className="sectionTitle">
-+          <h2><span className="torchDot" /> Commissioner Tools</h2>
-+          <span>Draft + weekly outcomes entry</span>
-+        </div>
-+
-+        <div className="panel" style={{ paddingTop: 12 }}>
-+          <div className="formGrid">
-+            <DraftBox
-+              players={data.players}
-+              cast={data.cast}
-+              draftedByPlayer={computed.draftedByPlayer}
-+              draftedSet={computed.draftedSet}
-+              onAdd={doSetDraft}
-+              onRemove={doRemoveDraft}
-+            />
-+
-+            <div className="box">
-+              <h3>Points system</h3>
-+              <div className="hint">Loaded from <code>scoring_rules</code> table.</div>
-+              <div className="divider" />
-+              <ul className="hint" style={{ margin: 0, paddingLeft: 18 }}>
-+                {data.scoringRules.map((r) => (
-+                  <li key={r.category_key}><b>{r.label}:</b> {r.points} pts</li>
-+                ))}
-+              </ul>
-+            </div>
+      <div className="wood">
+        <div className="sectionTitle">
+          <h2><span className="torchDot" /> Commissioner Tools</h2>
+          <span>Draft + weekly outcomes entry</span>
+        </div>
+
+        <div className="panel" style={{ paddingTop: 12 }}>
+          <div className="formGrid">
+            <DraftBox
+              players={data.players}
+              cast={data.cast}
+              draftedByPlayer={computed.draftedByPlayer}
+              draftedSet={computed.draftedSet}
+              onAdd={doSetDraft}
+              onRemove={doRemoveDraft}
+            />
+
+            <div className="box">
+              <h3>Points system</h3>
+              <div className="hint">Loaded from <code>scoring_rules</code> table.</div>
+              <div className="divider" />
+              <ul className="hint" style={{ margin: 0, paddingLeft: 18 }}>
+                {data.scoringRules.map((r) => (
+                  <li key={r.category_key}><b>{r.label}:</b> {r.points} pts</li>
+                ))}
+              </ul>
+            </div>
  
--      <div className="footer">
--        Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
-+            <div className="box">
-+              <h3>How totals work</h3>
-+              <div className="hint">
-+                Cast members earn points from weekly outcomes. Player total = sum of their 3 cast members’ season totals.
-+              </div>
-+            </div>
-+          </div>
-+
-+          <div className="divider" />
-+
-+          <OutcomesTable
-+            week={week}
-+            cast={data.cast}
-+            existingByCast={computed.outcomeByCast}
-+            onSave={doSaveOutcomes}
-+          />
-+
-+          <div className="divider" />
-+
-+          <div className="footer">
-+            Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
-+          </div>
-+        </div>
+
+            <div className="box">
+              <h3>How totals work</h3>
+              <div className="hint">
+                Cast members earn points from weekly outcomes. Player total = sum of their 3 cast members’ season totals.
+              </div>
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <OutcomesTable
+            week={week}
+            cast={data.cast}
+            existingByCast={computed.outcomeByCast}
+            onSave={doSaveOutcomes}
+          />
+
+          <div className="divider" />
+
+          <div className="footer">
+            Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
+          </div>
+        </div>
        </div>
      </div>
    )
@@ -418,20 +299,17 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
  
  function DraftBox(props: {
    players: Array<{ id: string; name: string; team_name: string }>
--  cast: Array<{ id: string; name: string; headshot_url?: string | null }>
-+  cast: Array<{ id: string; name: string; headshot_url: string | null }>
+   cast: Array<{ id: string; name: string; headshot_url: string | null }>
    draftedByPlayer: Map<string, string[]>
    draftedSet: Set<string>
    onAdd: (playerId: string, castId: string) => void
    onRemove: (playerId: string, castId: string) => void
  }) {
--    const { players, cast, draftedByPlayer, draftedSet, onAdd, onRemove } = props
-+  const { players, cast, draftedByPlayer, onAdd, onRemove } = props
+   const { players, cast, draftedByPlayer, onAdd, onRemove } = props
    const [playerId, setPlayerId] = useState(players[0]?.id ?? '')
  
    const playerPicks = draftedByPlayer.get(playerId) || []
  
--  // Map cast_member_id -> player_id (who owns it)
    const ownerByCast = useMemo(() => {
      const m = new Map<string, string>()
      for (const p of players) {
@@ -447,16 +325,14 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
    function handleTileClick(castId: string) {
      const owner = ownerByCast.get(castId)
  
--    // If already picked by this player => remove
+
      if (owner === playerId) {
        onRemove(playerId, castId)
        return
      }
  
--    // If owned by someone else => do nothing
      if (owner && owner !== playerId) return
--
--    // Otherwise add (if player has room)
+
      if (playerPicks.length >= 3) return
      onAdd(playerId, castId)
    }
@@ -471,12 +347,7 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
  
        <label className="hint" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
          Select player
--        <select
--          className="select"
--          value={playerId}
--          onChange={(e) => setPlayerId(e.target.value)}
--        >
-+        <select className="select" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
+         <select className="select" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
            {players.map((p) => (
              <option key={p.id} value={p.id}>
                {p.name} — {p.team_name}
@@ -496,40 +367,30 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
  
        <div className="divider" />
  
--      {/* Visual draft board */}
        <div className="draftGrid">
          {cast.map((c) => {
            const owner = ownerByCast.get(c.id) || null
            const isMine = owner === playerId
            const isTaken = !!owner && owner !== playerId
--          const canAdd = !owner && playerPicks.length < 3
+
  
            const statusText = isMine
--            ? "On this team (click to remove)"
-+            ? 'On this team (click to remove)'
+             ? 'On this team (click to remove)'
              : isTaken
--              ? `Drafted by ${playerNameById.get(owner!) ?? "another player"}`
--              : canAdd
--                ? "Available (click to draft)"
--                : "Available (team full)"
-+              ? `Drafted by ${playerNameById.get(owner!) ?? 'another player'}`
-+              : playerPicks.length >= 3
-+                ? 'Available (team full)'
-+                : 'Available (click to draft)'
+              ? `Drafted by ${playerNameById.get(owner!) ?? 'another player'}`
+              : playerPicks.length >= 3
+                ? 'Available (team full)'
+                : 'Available (click to draft)'
  
            return (
              <button
                key={c.id}
                type="button"
                className={
--                "draftTile" +
--                (isMine ? " mine" : "") +
--                (isTaken ? " taken" : "") +
--                (!owner && playerPicks.length >= 3 ? " disabled" : "")
-+                'draftTile' +
-+                (isMine ? ' mine' : '') +
-+                (isTaken ? ' taken' : '') +
-+                (!owner && playerPicks.length >= 3 ? ' disabled' : '')
+                'draftTile' +
+                (isMine ? ' mine' : '') +
+                (isTaken ? ' taken' : '') +
+                (!owner && playerPicks.length >= 3 ? ' disabled' : '')
                }
                onClick={() => handleTileClick(c.id)}
                disabled={isTaken || (!owner && playerPicks.length >= 3)}
@@ -537,8 +398,7 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
              >
                <div className="draftImg">
                  {c.headshot_url ? (
--                  <img src={c.headshot_url} alt={c.name} />
-+                  <img src={c.headshot_url ?? undefined} alt={c.name} />
+                  <img src={c.headshot_url ?? undefined} alt={c.name} />
                  ) : (
                    <div className="draftImgFallback" />
                  )}
@@ -546,12 +406,10 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
  
                <div className="draftMeta">
                  <div className="draftName">{c.name}</div>
--
                  {isMine && <div className="draftTag ok">On team • click to remove</div>}
                  {isTaken && <div className="draftTag lock">Drafted • {playerNameById.get(owner!)}</div>}
                  {!owner && !isMine && !isTaken && (
--                  <div className={"draftTag"}>{playerPicks.length >= 3 ? "Team full" : "Available"}</div>
-+                  <div className="draftTag">{playerPicks.length >= 3 ? 'Team full' : 'Available'}</div>
+                   <div className="draftTag">{playerPicks.length >= 3 ? 'Team full' : 'Available'}</div>
                  )}
                </div>
              </button>
@@ -579,20 +437,10 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
      </div>
    )
  }
--<CastScoringTable
--  week={week}
--  castScoreboard={computed.castScoreboard}
--  playerNameById={computed.playerNameById}
--  existingByCast={computed.outcomeByCast}
--  onSave={doSaveOutcomes}
--  scoringRules={data.scoringRules}
--/>
-+
  function OutcomesTable(props: {
    week: number
    cast: Array<{ id: string; name: string }>
--  existingByCast: Map<string, any>
-+  existingByCast: Map<string, OutcomeRowData>
+   existingByCast: Map<string, OutcomeRowData>
    onSave: (castId: string, values: OutcomeFormState) => void
  }) {
    const { week, cast, existingByCast, onSave } = props
@@ -628,8 +476,7 @@ index ce2543d31a9dc7057aab46f19bcb5a4fc9841279..4900272b653552d86b5582a486f7a044
    )
  }
  
--function OutcomeRow(props: { cast: { id: string; name: string }; existing?: any; onSave: (castId: string, values: OutcomeFormState) => void }) {
-+function OutcomeRow(props: { cast: { id: string; name: string }; existing?: OutcomeRowData; onSave: (castId: string, values: OutcomeFormState) => void }) {
+function OutcomeRow(props: { cast: { id: string; name: string }; existing?: OutcomeRowData; onSave: (castId: string, values: OutcomeFormState) => void }) {
    const { cast, existing, onSave } = props
    const [v, setV] = useState<OutcomeFormState>(() => ({
      immunity_wins: existing?.immunity_wins ?? 0,
