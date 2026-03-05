@@ -6,7 +6,7 @@ import {
   upsertOutcomes,
   type LeaguePayload,
 } from './api'
-import logoUrl from './assets/tribal_background.jpg'
+import logoUrl from './assets/survivor50_logo.png'
 
 const LS_JOIN = 's50_join'
 const LS_ADMIN = 's50_admin'
@@ -128,7 +128,7 @@ export default function App() {
       }
     }
 
-    // Player totals
+    // Player totals (still used elsewhere in this file)
     const playerSeasonTotal = new Map<string, number>()
     const playerWeekTotal = new Map<string, number>()
     players.forEach((p) => {
@@ -147,6 +147,18 @@ export default function App() {
       }))
       .sort((a, b) => (b.total - a.total) || (b.weekTotal - a.weekTotal))
 
+    /**
+     * ✅ Cast Member Scoreboard (ranked by season total)
+     * This is what we'll render, with inline weekly outcome inputs.
+     */
+    const castScoreboard = [...cast]
+      .map((c) => ({
+        ...c,
+        weekTotal: castWeekTotal.get(c.id) || 0,
+        total: castSeasonTotal.get(c.id) || 0,
+      }))
+      .sort((a, b) => (b.total - a.total) || (b.weekTotal - a.weekTotal))
+
     return {
       castById,
       draftedByPlayer,
@@ -156,6 +168,7 @@ export default function App() {
       castSeasonTotal,
       castWeekTotal,
       rulePoints,
+      castScoreboard,
     }
   }, [data, week])
 
@@ -294,7 +307,9 @@ export default function App() {
                 value={adminCode}
                 onChange={(e) => setAdminCode(e.target.value)}
               />
-              <button className="btn" onClick={refresh}>Refresh</button>
+              <button className="btn" onClick={refresh}>
+                Refresh
+              </button>
             </div>
           </div>
 
@@ -303,11 +318,11 @@ export default function App() {
         </div>
       </div>
 
-      {/* ✅ Combined Leaderboard + Weekly Outcomes Entry */}
+      {/* ✅ Cast Member Scoreboard + Weekly Outcomes (INLINE) */}
       <div className="wood" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">
-          <h2>Leaderboard + Week {week} Outcomes</h2>
-          <span>Rank • Player • Week Points • Season Points • Enter outcomes on drafted cast</span>
+          <h2>Cast Member Scoreboard</h2>
+          <span>Total points by cast member • enter week {week} outcomes inline</span>
         </div>
 
         <div className="tableWrap">
@@ -315,84 +330,45 @@ export default function App() {
             <thead>
               <tr>
                 <th className="rank">Rank</th>
-                <th>Player</th>
-                <th className="pts">Week</th>
-                <th className="pts">Season</th>
+                <th>Cast member</th>
+
+                {/* Weekly outcomes inputs go here */}
+                <th>Immunity</th>
+                <th>Reward</th>
+                <th>Idol found</th>
+                <th>Idol played</th>
+                <th>Power found</th>
+                <th>Power played</th>
+                <th className="pts">Save</th>
+
+                {/* Totals on the right */}
+                <th className="pts">Week pts</th>
+                <th className="pts">Total Points</th>
               </tr>
             </thead>
+
             <tbody>
-              {computed.leaderboard.map((p: any, idx: number) => (
-                <React.Fragment key={p.id}>
-                  <tr>
-                    <td className="rank">{idx + 1}</td>
-                    <td className="playerName">
-                      {p.name}{' '}
-                      <span className="badge" style={{ marginLeft: 8 }}>
-                        {p.team_name}
-                      </span>
-                    </td>
-                    <td className="pts">{p.weekTotal}</td>
-                    <td className="pts">{p.total}</td>
-                  </tr>
-
-                  {/* Drafted cast row with inputs */}
-                  <tr>
-                    <td colSpan={4} style={{ padding: 0 }}>
-                      <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                        <div className="hint" style={{ marginBottom: 8 }}>
-                          Draft picks: {(computed.draftedByPlayer.get(p.id) || []).length} / 3
-                          <span style={{ marginLeft: 10, opacity: 0.9 }}>
-                            (Enter week {week} outcomes for this player’s cast)
-                          </span>
-                        </div>
-
-                        {(computed.draftedByPlayer.get(p.id) || []).length === 0 ? (
-                          <div className="hint">No draft picks yet.</div>
-                        ) : (
-                          <div className="tableWrap">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Cast member</th>
-                                  <th className="pts">Week pts</th>
-                                  <th className="pts">Season pts</th>
-                                  <th>Immunity</th>
-                                  <th>Reward</th>
-                                  <th>Idol found</th>
-                                  <th>Idol played</th>
-                                  <th>Power found</th>
-                                  <th>Power played</th>
-                                  <th className="pts">Save</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(computed.draftedByPlayer.get(p.id) || [])
-                                  .map((cid: string) => computed.castById.get(cid))
-                                  .filter(Boolean)
-                                  .map((c: any) => (
-                                    <OutcomeCastRow
-                                      key={c.id}
-                                      cast={c}
-                                      weekPoints={computed.castWeekTotal.get(c.id) || 0}
-                                      seasonPoints={computed.castSeasonTotal.get(c.id) || 0}
-                                      existing={computed.outcomeByCast.get(c.id)}
-                                      onSave={doSaveOutcomes}
-                                    />
-                                  ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                </React.Fragment>
+              {computed.castScoreboard.map((c: any, idx: number) => (
+                <CastOutcomeRow
+                  key={c.id}
+                  rank={idx + 1}
+                  cast={c}
+                  existing={computed.outcomeByCast.get(c.id)}
+                  weekPoints={computed.castWeekTotal.get(c.id) || 0}
+                  totalPoints={computed.castSeasonTotal.get(c.id) || 0}
+                  onSave={doSaveOutcomes}
+                />
               ))}
             </tbody>
           </table>
         </div>
+
+        <div className="hint" style={{ marginTop: 10 }}>
+          Tip: Only the commissioner (admin code) can save outcomes. Totals update after refresh.
+        </div>
       </div>
 
+      {/* Everything else stays the same (Teams, Draft tools, etc.) */}
       <div className="wood" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">
           <h2>Teams</h2>
@@ -417,9 +393,7 @@ export default function App() {
                   <div style={{ fontWeight: 950, fontSize: 16 }}>
                     {p.name} <span className="badge" style={{ marginLeft: 8 }}>{p.team_name}</span>
                   </div>
-                  <div className="badge">
-                    Week: {p.weekTotal} • Total: {p.total}
-                  </div>
+                  <div className="badge">Week: {p.weekTotal} • Total: {p.total}</div>
                 </div>
                 <div className="small">Draft picks: {(computed.draftedByPlayer.get(p.id) || []).length} / 3</div>
               </div>
@@ -447,7 +421,7 @@ export default function App() {
       <div className="wood">
         <div className="sectionTitle">
           <h2>Commissioner Tools</h2>
-          <span>Draft entry (outcomes are now inside the leaderboard)</span>
+          <span>Draft entry</span>
         </div>
 
         <div className="panel" style={{ paddingTop: 12 }}>
@@ -590,17 +564,19 @@ function DraftBox(props: {
 }
 
 /**
- * Row used inside the combined leaderboard.
- * Shows cast member week/season points + the editable outcome inputs for the selected week.
+ * ✅ Combined row:
+ * Cast member name + weekly outcome inputs + save + totals
  */
-function OutcomeCastRow(props: {
+function CastOutcomeRow(props: {
+  rank: number
   cast: { id: string; name: string }
   existing?: any
   weekPoints: number
-  seasonPoints: number
+  totalPoints: number
   onSave: (castId: string, values: OutcomeFormState) => void
 }) {
-  const { cast, existing, onSave, weekPoints, seasonPoints } = props
+  const { rank, cast, existing, weekPoints, totalPoints, onSave } = props
+
   const [v, setV] = useState<OutcomeFormState>(() => ({
     immunity_wins: existing?.immunity_wins ?? 0,
     reward_wins: existing?.reward_wins ?? 0,
@@ -636,10 +612,10 @@ function OutcomeCastRow(props: {
 
   return (
     <tr>
+      <td className="rank">{rank}</td>
       <td className="playerName">{cast.name}</td>
-      <td className="pts">{weekPoints}</td>
-      <td className="pts">{seasonPoints}</td>
 
+      {/* Weekly outcome inputs inline */}
       <td>
         <input className="input outcomeInput" type="number" min={0} value={v.immunity_wins} onChange={(e) => setNum('immunity_wins', e.target.value)} />
       </td>
@@ -664,6 +640,10 @@ function OutcomeCastRow(props: {
           Save
         </button>
       </td>
+
+      {/* Totals on the right */}
+      <td className="pts">{weekPoints}</td>
+      <td className="pts">{totalPoints}</td>
     </tr>
   )
 }
