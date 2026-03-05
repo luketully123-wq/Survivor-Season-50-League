@@ -308,41 +308,6 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
   </div>
 </div>
 
-      <div className="wood" style={{ marginBottom: 12 }}>
-  <div className="sectionTitle">
-    <h2><span className="torchDot" /> Cast Member Scoreboard</h2>
-    <span>Total points by cast member</span>
-  </div>
-
-  <div className="tableWrap">
-    <table>
-      <thead>
-        <tr>
-          <th className="rank">Rank</th>
-          <th>Cast member</th>
-          <th>Drafted by</th>
-          <th className="pts">Total Points</th>
-        </tr>
-      </thead>
-      <tbody>
-        {computed.castScoreboard.map((c, idx) => {
-          const draftedBy = c.draftedByPlayerId ? computed.playerNameById.get(c.draftedByPlayerId) : null
-          return (
-            <tr key={c.id}>
-              <td className="rank">{idx + 1}</td>
-              <td className="playerName">{c.name}</td>
-              <td>
-                {draftedBy ? <span className="badge">{draftedBy}</span> : <span className="small">Undrafted</span>}
-              </td>
-              <td className="pts">{c.total}</td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  </div>
-</div>
-
 <div className="wood">
   <div className="sectionTitle">
     <h2><span className="torchDot" /> Commissioner Tools</h2>
@@ -381,14 +346,6 @@ const playerNameById = new Map(data.players.map((p) => [p.id, p.name]))
 
     <div className="divider" />
 
-    <OutcomesTable
-      week={week}
-      cast={data.cast}
-      existingByCast={computed.outcomeByCast}
-      onSave={doSaveOutcomes}
-    />
-  </div>
-</div>
       <div className="footer">
         Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
       </div>
@@ -545,7 +502,14 @@ function DraftBox(props: {
     </div>
   )
 }
-
+<CastScoringTable
+  week={week}
+  castScoreboard={computed.castScoreboard}
+  playerNameById={computed.playerNameById}
+  existingByCast={computed.outcomeByCast}
+  onSave={doSaveOutcomes}
+  scoringRules={data.scoringRules}
+/>
 function OutcomesTable(props: {
   week: number
   cast: Array<{ id: string; name: string }>
