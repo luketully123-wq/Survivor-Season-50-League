@@ -17,7 +17,7 @@ body{
   color:var(--ink);
 
   background:
-    linear-gradient(rgba(6,17,10,0.85), rgba(6,17,10,0.92)),
+    linear-gradient(rgba(6,17,10,0.35), rgba(6,17,10,0.35)),
     url("./assets/tribal_background.jpg");
 
   background-size:cover;
