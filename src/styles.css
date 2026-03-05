@@ -15,12 +15,14 @@ body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   color:var(--ink);
+
   background:
-    radial-gradient(1100px 700px at 20% -10%, rgba(42,107,59,0.55), transparent 55%),
-    radial-gradient(900px 600px at 92% 0%, rgba(215,179,106,0.22), transparent 55%),
-    radial-gradient(900px 900px at 50% 120%, rgba(42,107,59,0.38), transparent 60%),
-    repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 18px),
-    linear-gradient(180deg,var(--bg0),var(--bg1));
+    linear-gradient(rgba(6,17,10,0.85), rgba(6,17,10,0.92)),
+    url("./assets/tribal_background.jpg");
+
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
 }
 
 .wrap{max-width:1180px;margin:0 auto;padding:22px 16px 56px;}
