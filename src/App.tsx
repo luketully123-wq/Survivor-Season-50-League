@@ -6,7 +6,7 @@ import {
   upsertOutcomes,
   type LeaguePayload,
 } from './api'
-import logoUrl from './assets/logo-placeholder.svg'
+import logoUrl from './assets/tribal_background.jpg'
 
 const LS_JOIN = 's50_join'
 const LS_ADMIN = 's50_admin'
