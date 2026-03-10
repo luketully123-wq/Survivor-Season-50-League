@@ -54,8 +54,9 @@ export default function App() {
   )
   const [adminCode, setAdminCode] = useState<string>(localStorage.getItem(LS_ADMIN) || '')
   const [week, setWeek] = useState<number>(1)
-
+  
   const [data, setData] = useState<LeaguePayload | null>(null)
+  const [selectedCast, setSelectedCast] = useState<any | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -425,32 +426,44 @@ export default function App() {
                         <span className="hint">Draft not entered yet.</span>
                       ) : (
                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          {picks.map((c: any) => (
-                            <div
-                              key={c.id}
-                              className="tile"
-                              title={c.name}
-                              style={{
-                                width: 120,
-                                height: 160,
-                                borderRadius: 14,
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {c.headshot_url ? (
-                                <img
-                                  src={c.headshot_url}
-                                  alt={c.name}
-                                  style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
-                                />
-                              ) : (
-                                <div style={{ width: '100%', height: 120 }} />
-                              )}
-                              <div className="name" style={{ padding: '8px 10px', fontSize: 14, lineHeight: 1.1 }}>
-                                {c.name}
-                              </div>
-                            </div>
-                          ))}
+                          {picks.map((c: any) => {
+                           const isEliminated = c.eliminated_week && c.eliminated_week <= week
+
+                          return (
+                          <div
+                          key={c.id}
+                          className={"tile" + (isEliminated ? " eliminatedTile" : "")}
+                          title={c.name}
+                          onClick={() => setSelectedCast(c)}
+                          style={{
+                            width: 120,
+                            height: 160,
+                            borderRadius: 14,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            position: 'relative',
+                          }}
+                        >
+                          {c.headshot_url ? (
+                            <img
+                              src={c.headshot_url}
+                              alt={c.name}
+                              style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
+                            />
+                          ) : (
+                            <div style={{ width: '100%', height: 120 }} />
+                          )}
+                    
+                          {isEliminated && (
+                            <div className="elimOverlay">☠</div>
+                          )}
+                    
+                          <div className="name" style={{ padding: '8px 10px', fontSize: 14, lineHeight: 1.1 }}>
+                            {c.name}
+                          </div>
+                        </div>
+                      )
+                    })}
                         </div>
                       )}
                     </td>
@@ -563,7 +576,29 @@ export default function App() {
           </div>
         </div>
       </div>
-
+      {selectedCast && (
+        <div className="modalBackdrop" onClick={() => setSelectedCast(null)}>
+          <div className="modalCard" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>{selectedCast.name}</h3>
+            <div className="hint" style={{ marginBottom: 12 }}>
+              {selectedCast.eliminated_week
+                ? `Already eliminated in week ${selectedCast.eliminated_week}.`
+                : 'Mark this cast member as eliminated?'}
+            </div>
+      
+            <div className="row">
+              {!selectedCast.eliminated_week && (
+                <button className="btn" onClick={() => doEliminateCast(selectedCast.id)}>
+                  Eliminate
+                </button>
+              )}
+              <button className="btn" onClick={() => setSelectedCast(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="footer">
         Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
       </div>
