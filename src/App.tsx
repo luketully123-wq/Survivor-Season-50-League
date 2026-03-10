@@ -4,6 +4,7 @@ import {
   removeDraftPick,
   setDraftPick,
   upsertOutcomes,
+  eliminateCastMember,
   type LeaguePayload,
 } from './api'
 import logoUrl from './assets/survivor50_logo.png'
@@ -282,7 +283,23 @@ export default function App() {
       setErr(e?.message || 'Outcome save failed.')
     }
   }
-
+  async function doEliminateCast(castId: string) {
+  setErr(null)
+  setMsg(null)
+  try {
+    await eliminateCastMember({
+      joinCode: joinCode.trim(),
+      adminCode: adminCode.trim(),
+      castMemberId: castId,
+      eliminatedWeek: week,
+    })
+    setMsg('Cast member eliminated.')
+    setSelectedCast(null)
+    await refresh()
+  } catch (e: any) {
+    setErr(e?.message || 'Elimination failed.')
+  }
+}
   if (!data || !computed) {
     return (
       <div className="wrap">
