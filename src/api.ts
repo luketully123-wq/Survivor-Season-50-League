@@ -32,6 +32,13 @@ export async function setDraftPick(params: { joinCode: string; adminCode: string
   return data as { ok: boolean }
 }
 
+export async function eliminateCastMember(params: { joinCode: string; adminCode: string; castMemberId: string; eliminatedWeek: number }) {
+  const { data, error } = await supabase.functions.invoke('cast-eliminate', { body: params })
+  if (error) throw new Error(error.message)
+  if ((data as any)?.error) throw new Error((data as any).error)
+  return data as { ok: boolean }
+}
+
 export async function removeDraftPick(params: { joinCode: string; adminCode: string; playerId: string; castMemberId: string }) {
   const { data, error } = await supabase.functions.invoke('draft-remove', { body: params })
   if (error) throw new Error(error.message)
