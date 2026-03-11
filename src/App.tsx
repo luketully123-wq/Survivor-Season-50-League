@@ -30,7 +30,12 @@ type OutcomeFormState = {
   power_played: number
 }
 
-type CastMember = { id: string; name: string; headshot_url?: string | null }
+type CastMember = {
+  id: string
+  name: string
+  headshot_url?: string | null
+  eliminated_week?: number | null
+}
 type Player = { id: string; name: string; team_name: string }
 type ScoringRule = { category_key: string; label: string; points: number }
 
