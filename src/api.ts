@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 export type LeaguePayload = {
   league: { id: string; name: string; join_code: string }
   players: Array<{ id: string; name: string; team_name: string }>
-  cast: Array<{ id: string; name: string; headshot_url: string | null }>
+  cast: Array<{ id: string; name: string; headshot_url: string | null; eliminated_week?: number | null }>
   draft: Array<{ id: string; player_id: string; cast_member_id: string }>
   scoringRules: Array<{ category_key: string; label: string; points: number }>
   outcomes: Array<{
