@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Flame, Skull } from 'lucide-react'
 import {
   fetchLeagueByJoinCode,
   removeDraftPick,
@@ -41,7 +43,7 @@ type ScoringRule = { category_key: string; label: string; points: number }
 
 function trendBadge(prevRank?: number | null, currRank?: number | null) {
   if (!prevRank || !currRank) return <span className="hint">—</span>
-  const delta = prevRank - currRank // positive = improved
+  const delta = prevRank - currRank
   if (delta > 0) return <span className="success">▲ {delta}</span>
   if (delta < 0) return <span className="error">▼ {Math.abs(delta)}</span>
   return <span className="hint">•</span>
@@ -59,9 +61,9 @@ export default function App() {
   )
   const [adminCode, setAdminCode] = useState<string>(localStorage.getItem(LS_ADMIN) || '')
   const [week, setWeek] = useState<number>(1)
-  
+
   const [data, setData] = useState<LeaguePayload | null>(null)
-  const [selectedCast, setSelectedCast] = useState<any | null>(null)
+  const [selectedCast, setSelectedCast] = useState<CastMember | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -103,7 +105,6 @@ export default function App() {
     const rules: ScoringRule[] = data.scoringRules as any
     const outcomes: any[] = data.outcomes as any[]
 
-    // Draft mappings
     const draftedByPlayer = new Map<string, string[]>()
     players.forEach((p) => draftedByPlayer.set(p.id, []))
     for (const d of data.draft as any[]) {
@@ -111,11 +112,9 @@ export default function App() {
     }
     const draftedSet = new Set<string>((data.draft as any[]).map((d) => d.cast_member_id))
 
-    // Rule points
     const rulePoints = new Map<string, number>()
     for (const r of rules) rulePoints.set(r.category_key, r.points)
 
-    // Helper: compute points for an outcome row
     function pointsForOutcome(o: any) {
       return (
         (o.immunity_wins || 0) * (rulePoints.get('immunity') || 0) +
@@ -127,13 +126,11 @@ export default function App() {
       )
     }
 
-    // Outcomes lookup for current week (for inputs)
     const outcomeByCast = new Map<string, any>()
     for (const o of outcomes.filter((x) => x.week_number === week)) {
       outcomeByCast.set(o.cast_member_id, o)
     }
 
-    // Totals helpers: cumulative up to a given week (inclusive)
     function buildCastTotalsUpTo(weekN: number) {
       const castTotals = new Map<string, number>()
       cast.forEach((c) => castTotals.set(c.id, 0))
@@ -149,7 +146,6 @@ export default function App() {
     const castTotalUpToWeek = buildCastTotalsUpTo(week)
     const castTotalUpToPrevWeek = week > 1 ? buildCastTotalsUpTo(week - 1) : new Map<string, number>()
 
-    // Week totals for cast (selected week only)
     const castWeekTotal = new Map<string, number>()
     cast.forEach((c) => castWeekTotal.set(c.id, 0))
     for (const o of outcomes) {
@@ -159,14 +155,13 @@ export default function App() {
       }
     }
 
-    // Cast leaderboard (cumulative up to selected week)
     const castScoreboard = [...cast]
       .map((c) => ({
         ...c,
         weekTotal: castWeekTotal.get(c.id) || 0,
         total: castTotalUpToWeek.get(c.id) || 0,
       }))
-      .sort((a, b) => (b.total - a.total) || (b.weekTotal - a.weekTotal))
+      .sort((a, b) => b.total - a.total || b.weekTotal - a.weekTotal)
 
     const castScoreboardPrev = week > 1
       ? [...cast]
@@ -180,7 +175,6 @@ export default function App() {
     const castRankNow = rankMapFromSorted(castScoreboard as any)
     const castRankPrev = week > 1 ? rankMapFromSorted(castScoreboardPrev as any) : new Map<string, number>()
 
-    // Team (player) totals up to week (cumulative), plus rank-change vs previous week
     function playerTotalsFromCastTotals(castTotals: Map<string, number>) {
       const totals = new Map<string, number>()
       players.forEach((p) => {
@@ -289,23 +283,27 @@ export default function App() {
       setErr(e?.message || 'Outcome save failed.')
     }
   }
+
   async function doEliminateCast(castId: string) {
-  setErr(null)
-  setMsg(null)
-  try {
-    await eliminateCastMember({
-      joinCode: joinCode.trim(),
-      adminCode: adminCode.trim(),
-      castMemberId: castId,
-      eliminatedWeek: week,
-    })
-    setMsg('Cast member eliminated.')
-    setSelectedCast(null)
-    await refresh()
-  } catch (e: any) {
-    setErr(e?.message || 'Elimination failed.')
+    setErr(null)
+    setMsg(null)
+    try {
+      await eliminateCastMember({
+        joinCode: joinCode.trim(),
+        adminCode: adminCode.trim(),
+        castMemberId: castId,
+        eliminatedWeek: week,
+      })
+      localStorage.setItem(LS_ADMIN, adminCode.trim())
+      setMsg('Cast member eliminated.')
+      setSelectedCast(null)
+      await refresh()
+    } catch (e: any) {
+      console.error('cast-eliminate failed:', e)
+      setErr(e?.message || e?.error || JSON.stringify(e) || 'Elimination failed.')
+    }
   }
-}
+
   if (!data || !computed) {
     return (
       <div className="wrap">
@@ -392,11 +390,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* ✅ Teams Leaderboard (moved ABOVE cast leaderboard) */}
       <div className="wood" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">
           <h2>Teams Leaderboard</h2>
-          <span>Rank • movement vs week {Math.max(1, week - 1)} • bigger cast tiles • total cumulative score</span>
+          <span>Rank • movement vs week {Math.max(1, week - 1)} • torch snuffed elimination marker • total cumulative score</span>
         </div>
 
         <div className="tableWrap">
@@ -416,7 +413,7 @@ export default function App() {
                 const prevRank = week > 1 ? (computed.teamRankPrev.get(p.id) || null) : null
                 const picks = (computed.draftedByPlayer.get(p.id) || [])
                   .map((cid: string) => computed.castById.get(cid))
-                  .filter(Boolean) as any[]
+                  .filter(Boolean) as CastMember[]
 
                 return (
                   <tr key={p.id}>
@@ -431,44 +428,14 @@ export default function App() {
                         <span className="hint">Draft not entered yet.</span>
                       ) : (
                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          {picks.map((c: any) => {
-                           const isEliminated = c.eliminated_week && c.eliminated_week <= week
-
-                          return (
-                          <div
-                          key={c.id}
-                          className={"tile" + (isEliminated ? " eliminatedTile" : "")}
-                          title={c.name}
-                          onClick={() => setSelectedCast(c)}
-                          style={{
-                            width: 120,
-                            height: 160,
-                            borderRadius: 14,
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            position: 'relative',
-                          }}
-                        >
-                          {c.headshot_url ? (
-                            <img
-                              src={c.headshot_url}
-                              alt={c.name}
-                              style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
+                          {picks.map((c) => (
+                            <SurvivorCastTile
+                              key={c.id}
+                              cast={c}
+                              week={week}
+                              onClick={() => setSelectedCast(c)}
                             />
-                          ) : (
-                            <div style={{ width: '100%', height: 120 }} />
-                          )}
-                    
-                          {isEliminated && (
-                            <div className="elimOverlay">☠</div>
-                          )}
-                    
-                          <div className="name" style={{ padding: '8px 10px', fontSize: 14, lineHeight: 1.1 }}>
-                            {c.name}
-                          </div>
-                        </div>
-                      )
-                    })}
+                          ))}
                         </div>
                       )}
                     </td>
@@ -484,7 +451,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* ✅ Cast Member Scoreboard + Weekly Outcomes (INLINE) */}
       <div className="wood" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">
           <h2>Cast Member Scoreboard</h2>
@@ -498,8 +464,6 @@ export default function App() {
                 <th className="rank">Rank</th>
                 <th style={{ width: 80 }}>Δ</th>
                 <th>Cast member</th>
-
-                {/* Weekly outcomes inputs go here */}
                 <th>Immunity</th>
                 <th>Reward</th>
                 <th>Idol found</th>
@@ -507,8 +471,6 @@ export default function App() {
                 <th>Power found</th>
                 <th>Power played</th>
                 <th className="pts">Save</th>
-
-                {/* Totals on the right */}
                 <th className="pts">Week pts</th>
                 <th className="pts">Total</th>
               </tr>
@@ -581,19 +543,26 @@ export default function App() {
           </div>
         </div>
       </div>
+
       {selectedCast && (
         <div className="modalBackdrop" onClick={() => setSelectedCast(null)}>
           <div className="modalCard" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{selectedCast.name}</h3>
             <div className="hint" style={{ marginBottom: 12 }}>
-              {selectedCast.eliminated_week
+              {selectedCast.eliminated_week != null && selectedCast.eliminated_week <= week
                 ? `Already eliminated in week ${selectedCast.eliminated_week}.`
                 : 'Mark this cast member as eliminated?'}
             </div>
-      
+
+            {!adminCode.trim() && (
+              <div className="error" style={{ marginBottom: 12 }}>
+                Enter the commissioner admin code before eliminating a cast member.
+              </div>
+            )}
+
             <div className="row">
-              {!selectedCast.eliminated_week && (
-                <button className="btn" onClick={() => doEliminateCast(selectedCast.id)}>
+              {!(selectedCast.eliminated_week != null && selectedCast.eliminated_week <= week) && (
+                <button className="btn" disabled={!adminCode.trim()} onClick={() => doEliminateCast(selectedCast.id)}>
                   Eliminate
                 </button>
               )}
@@ -604,10 +573,193 @@ export default function App() {
           </div>
         </div>
       )}
+
       <div className="footer">
         Upload cast headshots to Supabase Storage and paste URLs into <code>cast_members.headshot_url</code>.
       </div>
     </div>
+  )
+}
+
+function SurvivorCastTile(props: {
+  cast: CastMember
+  week: number
+  onClick: () => void
+}) {
+  const { cast, week, onClick } = props
+  const isEliminated = cast.eliminated_week != null && cast.eliminated_week <= week
+  const eliminatedThisWeek = cast.eliminated_week != null && cast.eliminated_week === week
+
+  return (
+    <motion.div
+      className={'tile' + (isEliminated ? ' eliminatedTile' : '')}
+      title={cast.name}
+      onClick={onClick}
+      style={{
+        width: 132,
+        height: 188,
+        borderRadius: 16,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        position: 'relative',
+        background: '#171717',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 8px 22px rgba(0,0,0,0.28)',
+      }}
+      animate={{
+        filter: isEliminated ? 'grayscale(1) brightness(0.58)' : 'grayscale(0) brightness(1)',
+        scale: isEliminated ? 0.985 : 1,
+      }}
+      transition={{ duration: 0.45, ease: 'easeInOut' }}
+    >
+      <div style={{ position: 'relative', width: '100%', height: 138, overflow: 'hidden' }}>
+        {cast.headshot_url ? (
+          <img
+            src={cast.headshot_url}
+            alt={cast.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'grid',
+              placeItems: 'center',
+              background: 'linear-gradient(180deg, #3f3f46 0%, #18181b 100%)',
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: 28,
+              fontWeight: 700,
+              letterSpacing: 1,
+            }}
+          >
+            {initials(cast.name)}
+          </div>
+        )}
+
+        <motion.div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0,0,0,1)',
+            pointerEvents: 'none',
+          }}
+          animate={{ opacity: isEliminated ? 0.18 : 0 }}
+          transition={{ duration: 0.45 }}
+        />
+
+        <AnimatePresence mode="wait">
+          {!isEliminated ? (
+            <motion.div
+              key="flame"
+              initial={{ opacity: 0, scale: 0.9, y: 4 }}
+              animate={{
+                opacity: 1,
+                scale: [1, 1.08, 0.97, 1.04, 1],
+                y: [0, -1.5, 0, -1, 0],
+              }}
+              exit={{ opacity: 0, scale: 0.2, y: 14, transition: { duration: 0.2, ease: 'easeIn' } }}
+              transition={{ duration: 1.15, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 34,
+                height: 34,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 999,
+                background: 'rgba(0,0,0,0.38)',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    position: 'absolute',
+                    width: 24,
+                    height: 24,
+                    borderRadius: 999,
+                    background: 'rgba(251, 146, 60, 0.28)',
+                    filter: 'blur(10px)',
+                  }}
+                />
+                <Flame size={18} color="#fb923c" style={{ filter: 'drop-shadow(0 0 8px rgba(251,146,60,0.7))' }} />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="smoke"
+              initial={eliminatedThisWeek ? { opacity: 0.7, scale: 0.75, y: 4 } : false}
+              animate={eliminatedThisWeek ? { opacity: [0.7, 0.45, 0.15, 0], scale: [0.8, 1, 1.25, 1.45], y: [0, -10, -22, -32] } : { opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.1, ease: 'easeOut' }}
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 34,
+                height: 34,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  background: 'rgba(212,212,216,0.3)',
+                  filter: 'blur(10px)',
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isEliminated && (
+            <motion.div
+              initial={eliminatedThisWeek ? { opacity: 0, scale: 0.55, rotate: -10 } : false}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 180, damping: 16, delay: eliminatedThisWeek ? 0.12 : 0 }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  padding: 10,
+                  borderRadius: 999,
+                  background: 'rgba(0,0,0,0.38)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                <Skull size={52} color="white" style={{ filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.2))' }} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div style={{ padding: '10px 10px 8px', minHeight: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: 14, lineHeight: 1.15, textAlign: 'center', fontWeight: 600 }}>
+          {cast.name}
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
@@ -707,10 +859,6 @@ function DraftBox(props: {
   )
 }
 
-/**
- * ✅ Combined row:
- * Rank + trend + cast member name + weekly outcome inputs + save + totals
- */
 function CastOutcomeRow(props: {
   rank: number
   prevRank?: number | null
@@ -740,7 +888,6 @@ function CastOutcomeRow(props: {
       power_found: existing?.power_found ?? 0,
       power_played: existing?.power_played ?? 0,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     existing?.immunity_wins,
     existing?.reward_wins,
