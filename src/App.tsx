@@ -648,99 +648,101 @@ function SurvivorCastTile(props: {
           transition={{ duration: 0.45 }}
         />
 
-        <AnimatePresence mode="wait">
-          {!isEliminated ? (
-            <motion.div
-  key="flame"
-  initial={{ opacity: 1, scale: 1, y: 0 }}
-  animate={{
-    opacity: [0.9, 1, 0.92, 1, 0.96],
-    scale: [1, 1.04, 0.98, 1.03, 1],
-    y: [0, -1, 0, -0.5, 0],
-  }}
-  exit={{ opacity: 0, scale: 0.2, y: 14, transition: { duration: 0.2, ease: 'easeIn' } }}
-  transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-  style={{
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 34,
-    height: 34,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 999,
-    background: 'rgba(0,0,0,0.38)',
-    backdropFilter: 'blur(4px)',
-  }}
->
-  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {!isEliminated && (
+  <div
+    style={{
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 34,
+      height: 34,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 999,
+      background: 'rgba(0,0,0,0.38)',
+      backdropFilter: 'blur(4px)',
+    }}
+  >
+    <div
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 20,
+        height: 20,
+      }}
+    >
+      <motion.div
+        animate={{
+          opacity: [0.45, 0.6, 0.5, 0.65, 0.5],
+          scale: [1, 1.08, 0.98, 1.06, 1],
+        }}
+        transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          width: 24,
+          height: 24,
+          borderRadius: 999,
+          background: 'rgba(251, 146, 60, 0.32)',
+          filter: 'blur(10px)',
+        }}
+      />
+      <motion.div
+        animate={{
+          rotate: [-2, 2, -1, 1, 0],
+          y: [0, -0.5, 0, -0.25, 0],
+          scale: [1, 1.03, 0.99, 1.02, 1],
+        }}
+        transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Flame
+          size={20}
+          color="#fb923c"
+          style={{ filter: 'drop-shadow(0 0 10px rgba(251,146,60,0.85))' }}
+        />
+      </motion.div>
+    </div>
+  </div>
+)}
+
+<AnimatePresence>
+  {isEliminated && eliminatedThisWeek && (
     <motion.div
-      animate={{ scale: [1, 1.08, 1.02, 1] }}
-      transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+      initial={{ opacity: 0.7, scale: 0.75, y: 4 }}
+      animate={{
+        opacity: [0.7, 0.45, 0.15, 0],
+        scale: [0.8, 1, 1.25, 1.45],
+        y: [0, -10, -22, -32],
+      }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 1.1, ease: 'easeOut' }}
       style={{
         position: 'absolute',
-        width: 24,
-        height: 24,
-        borderRadius: 999,
-        background: 'rgba(251, 146, 60, 0.28)',
-        filter: 'blur(10px)',
+        top: 8,
+        right: 8,
+        width: 34,
+        height: 34,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'none',
       }}
-    />
-    <Flame
-      size={18}
-      color="#fb923c"
-      style={{ filter: 'drop-shadow(0 0 8px rgba(251,146,60,0.7))' }}
-    />
-  </div>
-</motion.div>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <motion.div
-                  animate={{ scale: [1, 1.15, 1] }}
-                  transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{
-                    position: 'absolute',
-                    width: 24,
-                    height: 24,
-                    borderRadius: 999,
-                    background: 'rgba(251, 146, 60, 0.28)',
-                    filter: 'blur(10px)',
-                  }}
-                />
-                <Flame size={18} color="#fb923c" style={{ filter: 'drop-shadow(0 0 8px rgba(251,146,60,0.7))' }} />
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="smoke"
-              initial={eliminatedThisWeek ? { opacity: 0.7, scale: 0.75, y: 4 } : false}
-              animate={eliminatedThisWeek ? { opacity: [0.7, 0.45, 0.15, 0], scale: [0.8, 1, 1.25, 1.45], y: [0, -10, -22, -32] } : { opacity: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.1, ease: 'easeOut' }}
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 34,
-                height: 34,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                pointerEvents: 'none',
-              }}
-            >
-              <div
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 999,
-                  background: 'rgba(212,212,216,0.3)',
-                  filter: 'blur(10px)',
-                }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+    >
+      <div
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 999,
+          background: 'rgba(212,212,216,0.3)',
+          filter: 'blur(10px)',
+        }}
+      />
+    </motion.div>
+  )}
+</AnimatePresence>
 
         <AnimatePresence>
           {isEliminated && (
