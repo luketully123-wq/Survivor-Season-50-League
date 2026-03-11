@@ -711,33 +711,57 @@ function SurvivorCastTile(props: {
 <AnimatePresence>
   {isEliminated && eliminatedThisWeek && (
     <motion.div
-      initial={{ opacity: 0.7, scale: 0.75, y: 4 }}
+      initial={{ opacity: 0.85, scale: 0.7, y: 6 }}
       animate={{
-        opacity: [0.7, 0.45, 0.15, 0],
-        scale: [0.8, 1, 1.25, 1.45],
-        y: [0, -10, -22, -32],
+        opacity: [0.85, 0.7, 0.45, 0.18, 0],
+        scale: [0.7, 1, 1.35, 1.65, 1.9],
+        y: [0, -8, -18, -30, -42],
       }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 1.1, ease: 'easeOut' }}
+      transition={{ duration: 1.4, ease: 'easeOut' }}
       style={{
         position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 34,
-        height: 34,
+        top: 0,
+        right: 0,
+        width: 64,
+        height: 64,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         pointerEvents: 'none',
+        zIndex: 6,
       }}
     >
       <div
         style={{
+          position: 'absolute',
           width: 22,
           height: 22,
-          borderRadius: 999,
-          background: 'rgba(212,212,216,0.3)',
-          filter: 'blur(10px)',
+          borderRadius: '999px',
+          background: 'rgba(220,220,225,0.55)',
+          filter: 'blur(8px)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 30,
+          height: 30,
+          borderRadius: '999px',
+          background: 'rgba(212,212,216,0.38)',
+          filter: 'blur(12px)',
+          transform: 'translate(-5px, -4px)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: 18,
+          height: 18,
+          borderRadius: '999px',
+          background: 'rgba(245,245,245,0.42)',
+          filter: 'blur(6px)',
+          transform: 'translate(7px, -8px)',
         }}
       />
     </motion.div>
